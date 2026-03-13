@@ -1,8 +1,18 @@
 # Skill: Missing Data Analysis
 
-**Version:** 2.0  
-**Contexte original:** Statistiek IV — Multivariate Data-Analyse, VUB (Theuns et al., 2016)  
-**Usage:** Généraliste — applicable à tout projet de recherche en sciences sociales
+**Version:** 2.1  
+**Auteur:** Bruno Mineo (MisterBlu1050)  
+**Licence:** MIT  
+**Domaine d'application:** Sciences sociales, psychologie, recherche quantitative
+
+> **Note sur les sources :** Ce skill est une œuvre indépendante originale.
+> Il s'appuie sur des concepts méthodologiques issus de la littérature scientifique
+> standard (Hair et al., van Buuren, Rubin, Schafer & Graham).
+> Il a été développé dans le cadre d'une formation universitaire
+> (Statistiek IV, VUB) mais ne reproduit aucun extrait du cours Theuns et al. (2016),
+> dont les droits appartiennent aux auteurs et à la VUB.
+> Toute ressemblance structurelle reflète la logique commune du domaine,
+> non une copie du matériel pédagogique.
 
 ---
 
@@ -57,7 +67,7 @@ gg_miss_var(df)
 | % missing | Stratégie indicative |
 |---|---|
 | < 10% | Toutes méthodes applicables ; listwise acceptable sous MCAR |
-| 10–20% | Listwise/régression sous MCAR ; modelgebaseerd sous MAR |
+| 10–20% | Listwise/régression sous MCAR ; MI ou EM sous MAR |
 | > 20% | Régression sous MCAR ; MI ou EM sous MAR |
 
 ---
@@ -214,8 +224,6 @@ Inclure systématiquement :
 ---
 
 ## Références
-- Theuns, P., Van Den Bussche, E., Isaac, C., & Muscarella, F. (2016).
-  *Multivariate Data-analyse*. VUB Uitgaven.
 - Hair, J.F. et al. (2019). *Multivariate Data Analysis* (8e ed.). Cengage.
 - Field, A. (2024). *Discovering Statistics Using IBM SPSS Statistics* (6e ed.). Sage.
 - van Buuren, S. (2018). *Flexible Imputation of Missing Data* (2e ed.).
@@ -228,3 +236,7 @@ Inclure systématiquement :
 - Rubin, D.B. (1987). *Multiple Imputation for Nonresponse in Surveys*. Wiley.
 - Schafer, J.L. & Graham, J.W. (2002). Missing data: Our view of the state of
   the art. *Psychological Methods*, 7(2), 147–177.
+
+---
+
+*Développé de manière autonome par Bruno Mineo. Tout retour bienvenu via les Issues GitHub.*
