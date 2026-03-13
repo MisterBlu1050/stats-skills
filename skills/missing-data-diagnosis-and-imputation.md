@@ -1,6 +1,6 @@
 # Skill: Missing Data Diagnosis and Imputation
 
-**Version:** 2.2  
+**Version:** 2.3  
 **Author:** Bruno Mineo (MisterBlu1050)  
 **License:** MIT  
 **Field:** Social sciences, psychology, quantitative research
@@ -18,7 +18,7 @@
 
 ## Purpose
 Guide a complete missing data analysis through a 4-step protocol —
-from diagnosis to remediation — with R and SPSS code and APA reporting templates.
+from diagnosis to remediation — with R, SPSS, and Python code and APA reporting templates.
 
 > **Reproducibility principle:** Always set a random seed before any stochastic
 > operation (imputation, resampling). Always report exact model figures
@@ -29,7 +29,7 @@ from diagnosis to remediation — with R and SPSS code and APA reporting templat
 ## Expected inputs
 - Dataset (CSV, .sav, or variable description)
 - Research context (design, variables, research question)
-- Software preference: R or SPSS
+- Software preference: R, SPSS, or Python
 
 ---
 
@@ -120,10 +120,39 @@ MISSING VALUE ANALYSIS
 * Report exact figures: chi2(df) = X.XX, p = .XXX
 ```
 
+**Python — ⚠️ CRITICAL LIMITATION**
+```python
+# Little's MCAR test is NOT available in standard Python libraries.
+# Implementations exist only in R (naniar, BaylorEdits).
+#
+# If using Python:
+# 1. Acknowledge the limitation explicitly in your report
+# 2. Conduct alternative diagnostics (see 3b and 3c below)
+# 3. Consider calling R via rpy2 if the test is strictly required
+#
+# DO NOT:
+# - Claim to have performed Little's test without R
+# - Omit mention of the test — this signals incomplete diagnosis
+#
+# Honest reporting:
+# "Little's MCAR test (implemented in R via naniar) was beyond
+# the scope of this Python analysis. We proceeded with:
+# - Missing-indicator correlations (conducted, n sig. found)
+# - Pattern inspection (conducted, see results below)
+# These suggest [MAR/MNAR] but do not formally test for MCAR."
+```
+
 > ⚠️ **Two-sided limitation of Little's test:**
 > - Large N → over-powered: p < .05 for practically negligible deviations
 > - Small N → under-powered: p > .05 **does not confirm MCAR** —
 >   it only means insufficient evidence to reject it (Type II error possible)
+
+> ⚠️ **Software limitation (Python):**
+> - Little's MCAR test requires R (packages: naniar, BaylorEdits)
+> - No maintained Python implementation exists
+> - Do NOT pretend to have conducted this test in Python
+> - Instead: acknowledge limitation + report alternative diagnostics (3b, 3c, 3d)
+> - This is **honest methodology**, not a weakness
 
 #### b) Missing-indicator correlations
 
@@ -184,6 +213,22 @@ T-TEST GROUPS = BP_missing(0 1)
 * Report exact t, df, p, and means for each group.
 ```
 
+**Python**
+```python
+from scipy.stats import ttest_ind
+import pandas as pd
+
+# Example: does age differ between cases with/without missing BP?
+age_with_bp    = df[df['BP'].notna()]['Age']
+age_without_bp = df[df['BP'].isna()]['Age']
+
+t_stat, p_val = ttest_ind(age_with_bp, age_without_bp)
+print(f"t = {t_stat:.3f}, p = {p_val:.4f}")
+print(f"M_complete = {age_with_bp.mean():.2f}")
+print(f"M_missing  = {age_without_bp.mean():.2f}")
+# Report: t(df) = X.XX, p = .XXX, M_missing = X.XX, M_complete = X.XX
+```
+
 #### d) Visual pattern inspection
 
 **R**
@@ -202,6 +247,70 @@ MISSING VALUE ANALYSIS
   /PATTERN VARIABLES = BMI Age Gender Sleep Smoke BP Chol.
 * The pattern table shows which combinations of variables are missing together.
 ```
+
+**Python**
+```python
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Heatmap: which observations have missing data on which variables
+missing_matrix = df.isna().astype(int)
+
+plt.figure(figsize=(12, 8))
+sns.heatmap(missing_matrix, cbar=True, cmap='RdYlGn_r')
+plt.title('Missing Data Pattern Matrix (0 = observed, 1 = missing)')
+plt.tight_layout()
+plt.show()
+
+# Tabulate exact % missing per variable
+for col in df.columns:
+    missing_pct = df[col].isna().sum() / len(df) * 100
+    if missing_pct > 0:
+        print(f"{col}: {missing_pct:.1f}% missing (n={df[col].isna().sum()})")
+```
+
+#### e) Synthesis: how to conclude on mechanism
+
+**Do NOT conclude prematurely from visual inspection alone:**
+
+```
+❌ WRONG: "Visual inspection shows missingness varies by year.
+           Therefore, mechanism is MAR."
+   → Premature. You haven't tested formally.
+
+✅ CORRECT: "Visual inspection shows missingness varies systematically
+             by year and by country (not random). Missing-indicator
+             correlations with life expectancy are significant
+             (12/19 years, p < .05), suggesting MAR. Little's MCAR
+             test [R result / Python unavailable] would formally test
+             this hypothesis. We treat data as MAR for MICE imputation,
+             with caveat that MNAR cannot be ruled out (missing may
+             depend on unobserved happiness itself)."
+```
+
+**Honest conclusion template (Python context):**
+```
+"Missingness was analyzed via:
+  1. Visual pattern inspection → [4 temporal phases identified]
+  2. Missing-indicator correlations with observed covariates
+     → [X/Y correlations significant, p < .05]
+  3. [Little's MCAR test not available in Python; would require R]
+
+  These findings suggest a non-random mechanism (MAR likely,
+  MCAR rejected). However, MNAR risk remains: missing values may
+  correlate with unobserved values themselves. Multiple imputation
+  (MICE) assumes MAR; sensitivity analyses under MNAR assumptions
+  are recommended."
+```
+
+**Decision table:**
+
+| Evidence | Conclusion |
+|---|---|
+| Little p > .05 + no significant correlations | MCAR plausible |
+| Little p < .05 OR significant correlations with observed vars | MAR suspected |
+| Patterns only explainable by the missing value itself | MNAR suspected |
+| Python: no Little's test + significant correlations | MAR suspected — acknowledge test limitation |
 
 ---
 
@@ -269,7 +378,6 @@ REGRESSION
   /METHOD ENTER Age Gender BMI Sleep Chol Smoke
   /SAVE PRED(BP_reg_pred).
 
-* Replace missing BP with predicted value
 COMPUTE BP_reg_imp = BP.
 IF (MISSING(BP)) BP_reg_imp = BP_reg_pred.
 EXECUTE.
@@ -287,7 +395,6 @@ set.seed(12345)  # for reproducibility
 imp <- mice(df, m = 20, method = "pmm", printFlag = FALSE)
 # PMM = Predictive Mean Matching
 
-# Fit model on each imputed dataset and pool results (Rubin's rules)
 fit    <- with(imp, lm(BP ~ Age + Gender + BMI))
 pooled <- pool(fit)
 summary(pooled)
@@ -296,23 +403,13 @@ summary(pooled)
 
 **SPSS**
 ```spss
-* --- STEP 4: Multiple Imputation (MICE) ---
 SET SEED 12345.
-
 MULTIPLE IMPUTATION
   BMI Age Gender Sleep Smoke BP Chol
   /IMPUTE METHOD = AUTO
          NIMPUTATIONS = 20
   /OUTFILE IMPUTATIONS = 'nhanes_imputed.sav'
   /MISSINGSUMMARY = NONE.
-
-* --- Pool results with Rubin's rules ---
-* Open nhanes_imputed.sav, then:
-DATASET ACTIVATE nhanes_imputed.
-ANALYZE > Compare Means > Means
-  /DEPENDENT BP Chol Smoke
-  /LAYER Imputation_.
-* SPSS pools M and SE automatically via Rubin's rules.
 * Report: M = X.XX, SE = X.XX (pooled, m = 20)
 ```
 
@@ -322,7 +419,6 @@ ANALYZE > Compare Means > Means
 
 **SPSS**
 ```spss
-* --- EM imputation ---
 MISSING VALUE ANALYSIS
   /VARIABLES = BMI Age Gender Sleep Smoke BP Chol
   /EM(TOLERANCE=0.001 CONVERGENCE=0.0001 ITERATIONS=25
